@@ -9,6 +9,7 @@ Common Topics Asked by Interviewers:
 - Power Optimizations
 - Assertions
 - Coverage
+- Polymorphism
 
 
 https://thedatabus.in/interview_list

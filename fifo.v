@@ -86,3 +86,78 @@ assign full = counter;
 assign empty = !counter;
 
 endmodule
+
+
+module fifo_async_1 #(
+    parameter DATA_WIDTH = 8  // Width of the data stored in the FIFO
+)(
+    input write_clk,          // Write clock
+    input read_clk,           // Read clock
+    input reset,              // Reset signal
+    input write_en,           // Write enable
+    input read_en,            // Read enable
+    input [DATA_WIDTH-1:0] d_in, // Data input
+    output reg [DATA_WIDTH-1:0] d_out, // Data output
+    output full,              // Full flag
+    output empty              // Empty flag
+);
+
+    // Internal register to hold the data
+    reg [DATA_WIDTH-1:0] memory;
+    reg fifo_full;            // Internal full flag
+    reg fifo_empty;           // Internal empty flag
+
+    // Synchronization registers for flags
+    reg fifo_full_sync1, fifo_full_sync2;   // Sync full flag to read clock
+    reg fifo_empty_sync1, fifo_empty_sync2; // Sync empty flag to write clock
+
+    // Full and empty assignments
+    assign full = fifo_full;
+    assign empty = fifo_empty;
+
+    // Write logic (write clock domain)
+    always @(posedge write_clk or posedge reset) begin
+        if (reset) begin
+            fifo_full <= 0;
+        end else if (write_en && !fifo_full) begin
+            memory <= d_in;       // Store data
+            fifo_full <= 1;       // Mark as full
+            fifo_empty <= 0;      // Not empty anymore
+        end
+    end
+
+    // Read logic (read clock domain)
+    always @(posedge read_clk or posedge reset) begin
+        if (reset) begin
+            fifo_empty <= 1;
+            d_out <= 0;
+        end else if (read_en && !fifo_empty) begin
+            d_out <= memory;      // Output data
+            fifo_empty <= 1;      // Mark as empty
+            fifo_full <= 0;       // Not full anymore
+        end
+    end
+
+    // Synchronize full flag to read clock domain
+    always @(posedge read_clk or posedge reset) begin
+        if (reset) begin
+            fifo_full_sync1 <= 0;
+            fifo_full_sync2 <= 0;
+        end else begin
+            fifo_full_sync1 <= fifo_full;
+            fifo_full_sync2 <= fifo_full_sync1; // Second stage sync
+        end
+    end
+
+    // Synchronize empty flag to write clock domain
+    always @(posedge write_clk or posedge reset) begin
+        if (reset) begin
+            fifo_empty_sync1 <= 1;
+            fifo_empty_sync2 <= 1;
+        end else begin
+            fifo_empty_sync1 <= fifo_empty;
+            fifo_empty_sync2 <= fifo_empty_sync1; // Second stage sync
+        end
+    end
+
+endmodule
